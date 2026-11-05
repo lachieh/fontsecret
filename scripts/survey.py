@@ -4,7 +4,8 @@
 
 Per font: outline format, which stylistic sets it already uses, whether patching works,
 whether the masking cases draw as expected (always-on build), whether typing ever redraws,
-whether plain code still shapes as in the original under each of its features, and OTS.
+whether plain code still shapes as in the original under each of its features, whether
+`fontsecret verify` passes, and OTS.
 """
 
 import io
@@ -21,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tests"))
 from fontsecret import font as patcher  # noqa: E402
 from fontsecret.patterns import load  # noqa: E402
+from fontsecret.verify import verify  # noqa: E402
 from test_masking import CASES, PLAIN  # noqa: E402
 
 PATTERNS = load()
@@ -99,6 +101,7 @@ def survey(path: Path) -> dict:
     row["plain_changed"] = changed
 
     row["ots"] = sanitize(data)
+    row["verify"] = verify(TTFont(path), TTFont(io.BytesIO(data))).errors
     row["ots_original"] = sanitize(path.read_bytes())
     return row
 
@@ -138,6 +141,8 @@ def main() -> None:
                 problems.append(f"{r['redraws']} lines redraw")
             if r["plain_changed"]:
                 problems.append("plain code changes under " + ", ".join(r["plain_changed"]))
+            if r["verify"]:
+                problems.append("verify: " + "; ".join(r["verify"][:2]))
             if r["ots"] != "ok" and r["ots_original"] == "ok":
                 problems.append("OTS: " + r["ots"])
             elif r["ots"] != "ok":

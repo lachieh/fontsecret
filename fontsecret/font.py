@@ -46,6 +46,11 @@ def patch(font: TTFont, patterns: Patterns, feature: str | None = None) -> dict:
     for t in ("hdmx", "LTSH", "VDMX"):
         if t in font:
             del font[t]
+    # cmap and OS/2 are only read. fontTools re-encodes any table it has loaded, which can
+    # change bytes (OS/2.usFirstCharIndex), so drop the loaded copies and keep the originals.
+    for t in ("cmap", "OS/2"):
+        if font.reader is not None and t in font.reader:
+            font.tables.pop(t, None)
     return {"feature": tag, "triggers": len(patterns.triggers) - len(p.skipped),
             "skipped": [t.text for t in p.skipped], "glyphs_added": len(p.markers) + len(p.masks)}
 
