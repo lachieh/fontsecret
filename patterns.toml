@@ -1,0 +1,163 @@
+# Secret patterns the masking rules are generated from.
+#
+# Written from each issuer's public description of its token format; nothing here is
+# taken from Obel Mono. A rule only ever looks backwards (see README), so a pattern is
+# a *trigger*: text that, once drawn, says the characters after it are a secret.
+#
+# - `[[prefix]]`: tokens that announce themselves (ghp_, sk-ant-, AKIA ...).
+# - `[[assignment]]`: names that say a secret value follows (GITHUB_TOKEN=, "password": ").
+#   Each name is expanded through each form; `{}` is the name.
+#
+# Every match keeps `keep` characters visible after the trigger, then masks each
+# following character that belongs to the charset. The first character outside the
+# charset ends the mask. With `word_filter = true`, a window of `keep` lowercase letters
+# reads as an ordinary word (token: string) and is not masked. Prefixes never filter:
+# a ghp_ followed by four lowercase letters is still a token.
+#
+# A trigger that starts with a letter or digit only matches at a word start, so
+# xghp_..., MONKEY=... and MYTOKEN=... stay visible. No trigger may end with another
+# (the loader rejects it) unless the extra text ends in punctuation: TOKEN= also fires
+# inside GITHUB_TOKEN=.
+
+keep = 4
+
+[charsets]
+alnum = "A-Za-z0-9"
+word = "A-Za-z0-9_"
+b64url = "A-Za-z0-9_-"
+jwt = "A-Za-z0-9_.-"
+upper = "A-Z0-9"
+hex = "0-9a-f"
+# Printable ASCII without space, quotes, backtick, comma, semicolon, backslash, & and #.
+value = "!$%()*+./0-9:<=>?@A-Z[]^_a-z{|}~-"
+
+[[prefix]]
+issuer = "GitHub"
+source = "https://github.blog/engineering/platform-security/behind-githubs-new-authentication-token-formats/"
+starts = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_"]
+charset = "alnum"
+
+[[prefix]]
+issuer = "GitHub fine-grained"
+source = "https://github.blog/security/application-security/introducing-fine-grained-personal-access-tokens-for-github/"
+starts = ["github_pat_"]
+charset = "word"
+
+[[prefix]]
+issuer = "GitLab"
+source = "https://docs.gitlab.com/security/tokens/#token-prefixes"
+starts = ["glpat-", "gldt-", "glrt-"]
+charset = "b64url"
+
+[[prefix]]
+issuer = "Anthropic"
+source = "https://docs.anthropic.com/en/api/overview"
+starts = ["sk-ant-"]
+charset = "b64url"
+
+[[prefix]]
+issuer = "OpenAI"
+source = "https://platform.openai.com/docs/api-reference/authentication"
+starts = ["sk-proj-", "sk-svcacct-", "sk-admin-"]
+charset = "b64url"
+
+[[prefix]]
+issuer = "AWS access key id"
+source = "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids"
+starts = ["AKIA", "ASIA"]
+charset = "upper"
+
+[[prefix]]
+issuer = "Google API key"
+source = "https://cloud.google.com/docs/authentication/api-keys"
+starts = ["AIza"]
+charset = "b64url"
+
+[[prefix]]
+issuer = "Slack"
+source = "https://api.slack.com/concepts/token-types"
+starts = ["xoxb-", "xoxp-", "xoxa-", "xoxe-", "xapp-"]
+charset = "b64url"
+
+[[prefix]]
+issuer = "Stripe secret and restricted keys"
+source = "https://docs.stripe.com/keys"
+starts = ["sk_live_", "sk_test_", "rk_live_", "rk_test_", "whsec_"]
+charset = "alnum"
+
+[[prefix]]
+issuer = "npm"
+source = "https://github.blog/changelog/2021-09-23-npm-has-a-new-access-token-format/"
+starts = ["npm_"]
+charset = "alnum"
+
+[[prefix]]
+issuer = "PyPI"
+source = "https://pypi.org/help/#apitoken"
+starts = ["pypi-"]
+charset = "b64url"
+
+[[prefix]]
+issuer = "Hugging Face"
+source = "https://huggingface.co/docs/hub/security-tokens"
+starts = ["hf_"]
+charset = "alnum"
+
+[[prefix]]
+issuer = "DigitalOcean"
+source = "https://docs.digitalocean.com/reference/api/create-personal-access-token/"
+starts = ["dop_v1_", "doo_v1_"]
+charset = "hex"
+
+[[prefix]]
+issuer = "Shopify"
+source = "https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens"
+starts = ["shpat_", "shpss_", "shpca_"]
+charset = "hex"
+
+[[prefix]]
+issuer = "SendGrid"
+source = "https://www.twilio.com/docs/sendgrid/ui/account-and-settings/api-keys"
+starts = ["SG."]
+charset = "jwt"
+
+[[prefix]]
+issuer = "JSON Web Token (base64url of '{\"')"
+source = "https://www.rfc-editor.org/rfc/rfc7519"
+starts = ["eyJ"]
+charset = "jwt"
+
+[[assignment]]
+note = "Passwords in environment variables, .env files and YAML. Often lowercase words, so no word filter."
+names = ["PASSWORD", "PASSWD"]
+forms = ["{}=", "{}: ", "{}=\"", "{}='"]
+charset = "value"
+word_filter = false
+
+[[assignment]]
+note = "Keys and tokens in environment variables, .env files and YAML: GITHUB_TOKEN=..., API_KEY: ..."
+names = ["TOKEN", "SECRET", "API_KEY", "APIKEY", "ACCESS_KEY", "PRIVATE_KEY"]
+forms = ["{}=", "{}: ", "{}=\"", "{}='"]
+charset = "value"
+word_filter = true
+
+[[assignment]]
+note = "Passwords in JSON, query strings, .ini files and CLI flags"
+names = ["password", "passwd"]
+forms = ["{}=", "\"{}\": \"", "\"{}\":\"", "--{} "]
+charset = "value"
+word_filter = false
+
+[[assignment]]
+note = "Keys and tokens in lower case. `token: string` (a TypeScript type) stays visible through the word filter."
+names = ["token", "secret", "api_key", "apikey", "api-key"]
+forms = ["{}=", "{}: ", "\"{}\": \"", "\"{}\":\"", "--{} "]
+charset = "value"
+word_filter = true
+
+[[assignment]]
+note = "HTTP Authorization header, curl -H, fetch headers"
+names = ["Bearer"]
+forms = ["{} "]
+charset = "value"
+word_filter = true
