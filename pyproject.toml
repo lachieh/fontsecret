@@ -1,0 +1,17 @@
+[project]
+name = "fontsecret"
+version = "0.0.0"
+description = "Add on-screen masking of known secret-token patterns to an existing OpenType font"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = ["fonttools>=4.60"]
+
+[dependency-groups]
+dev = ["pytest>=8", "uharfbuzz>=0.50", "opentype-sanitizer>=9"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
