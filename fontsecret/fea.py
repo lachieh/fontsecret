@@ -51,17 +51,24 @@ def plan(
     skipped = tuple(t for t in patterns.triggers if t not in usable)
     kinds = list(dict.fromkeys(t.kind for t in usable))
 
-    markers = {marker_glyph(cmap[ord(t.text[-1])], t.kind): cmap[ord(t.text[-1])] for t in usable}
+    def own(ch: str) -> list[str]:
+        """Glyphs that draw `ch` before masking: its own, its rvrn variants, and for a
+        space also U+00A0, which editors may draw instead (VS Code in `"password": "`)."""
+        g = cmap[ord(ch)]
+        out = [g, *sorted(set(variants.get(g, ())) - {g})]
+        if ch == " " and 0xA0 in cmap and cmap[0xA0] not in out:
+            out.append(cmap[0xA0])
+        return out
+
+    # A marker copies exactly the glyph it replaces, so it draws the same: a font's U+00A0
+    # can be wider than its space (OpenDyslexic).
+    markers = {marker_glyph(g, t.kind): g for t in usable for g in own(t.text[-1])}
 
     def glyphs(ch: str) -> list[str]:
-        """The glyphs `ch` may be drawn with when a rule looks back at it: its own, rvrn
-        variants, and its marker copies (TOKEN=' still matches after TOKEN= marked the =)."""
-        g = cmap[ord(ch)]
-        own = [g, *sorted(set(variants.get(g, ())) - {g})]
-        # Editors may draw a space as U+00A0: VS Code does in `"password": "`.
-        if ch == " " and 0xA0 in cmap and cmap[0xA0] not in own:
-            own.append(cmap[0xA0])
-        return own + [m for m, base in markers.items() if base in own]
+        """The glyphs `ch` may be drawn with when a rule looks back at it, including marker
+        copies (TOKEN=' still matches after TOKEN= marked the =)."""
+        base = own(ch)
+        return base + [m for m, g in markers.items() if g in base]
 
     def cls(chars: str) -> str:
         names = [g for ch in chars if ord(ch) in cmap for g in glyphs(ch)]
@@ -69,7 +76,7 @@ def plan(
 
     def raw(chars: str) -> str:
         """Glyphs of unmarked characters: what a rule may still replace."""
-        names = [g for ch in chars if ord(ch) in cmap for g in glyphs(ch) if g not in markers]
+        names = [g for ch in chars if ord(ch) in cmap for g in own(ch)]
         return "[" + " ".join(f"\\{g}" for g in dict.fromkeys(names)) + "]"
 
     classes = [f"@sm_boundary = {cls(WORD_CHARS)};", f"@sm_lower = {raw(LOWER)};"]
@@ -77,9 +84,10 @@ def plan(
     # one that would end a trigger (the eyJ after a JWT's first dot).
     rules: list[str] = []
     for k in kinds:
-        own = " ".join(dict.fromkeys(f"\\{marker_glyph(cmap[ord(t.text[-1])], k)}" for t in usable if t.kind == k))
+        kind_markers = " ".join(dict.fromkeys(
+            f"\\{marker_glyph(g, k)}" for t in usable if t.kind == k for g in own(t.text[-1])))
         mark, charset = f"@sm_marker_{_ident(k)}", f"@sm_cs_{_ident(k)}"
-        classes += [f"{mark} = [{own}];", f"{charset} = {raw(k.chars)};"]
+        classes += [f"{mark} = [{kind_markers}];", f"{charset} = {raw(k.chars)};"]
         if k.word_filter:
             rules.append(f"    ignore sub {mark} {' '.join(['@sm_lower'] * patterns.keep)} {charset}';")
         rules.append(f"    sub {mark} {' '.join([charset] * patterns.keep)} {charset}' by \\{mask_glyph(k)};")
@@ -89,7 +97,9 @@ def plan(
         context = " ".join(cls(c) for c in before)
         if t.text[0] in WORD_CHARS:
             rules.append(f"    ignore sub @sm_boundary {context} {raw(last)}';")
-        rules.append(f"    sub {context} {raw(last)}' by \\{marker_glyph(cmap[ord(last)], t.kind)};")
+        sources = own(last)
+        targets = " ".join(f"\\{marker_glyph(g, t.kind)}" for g in sources)
+        rules.append(f"    sub {context} {raw(last)}' by [{targets}];")
 
     fea = "\n".join(
         [
