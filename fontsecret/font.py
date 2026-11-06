@@ -19,14 +19,19 @@ from . import fea
 from .patterns import Patterns
 
 ALWAYS_ON = "ccmp"
+DEFAULT_FEATURE = "MASK"
 
 
 class Unsupported(Exception):
     pass
 
 
-def patch(font: TTFont, patterns: Patterns, feature: str | None = None) -> dict:
-    """Patch `font` in place. `feature` is a tag (ssNN, ccmp ...); None picks a free ssNN."""
+def patch(font: TTFont, patterns: Patterns, feature: str = DEFAULT_FEATURE) -> dict:
+    """Patch `font` in place under the private opt-in `MASK` tag by default.
+
+    `feature` overrides the tag and must not already exist in the font, except for
+    `ALWAYS_ON` (`ccmp`), which attaches masking to the existing feature.
+    """
     if "CFF2" in font:
         raise Unsupported("CFF2 (variable OTF) outlines are not supported; use the TTF build")
     if "glyf" not in font and "CFF " not in font:
@@ -36,7 +41,9 @@ def patch(font: TTFont, patterns: Patterns, feature: str | None = None) -> dict:
     # own byte for byte: some fonts (Iosevka) only pass OTS in their original encoding.
     font.recalcBBoxes = False
     gsub = _ensure_gsub(font)
-    tag = feature or _free_stylistic_set(gsub)
+    tag = feature
+    if tag != ALWAYS_ON and any(r.FeatureTag == tag for r in gsub.FeatureList.FeatureRecord):
+        raise Unsupported(f"feature {tag!r} already exists; choose a different feature tag")
 
     p = fea.plan(patterns, font.getBestCmap(), _rvrn_variants(gsub))
     _add_glyphs(font, p)
@@ -73,14 +80,6 @@ def rename(font: TTFont, suffix: str) -> None:
         for key in ("FamilyName", "FullName"):
             if hasattr(top, key):
                 setattr(top, key, getattr(top, key).replace(family, new_family))
-
-
-def _free_stylistic_set(gsub) -> str:
-    used = {r.FeatureTag for r in gsub.FeatureList.FeatureRecord} if gsub else set()
-    for n in range(20, 0, -1):
-        if (tag := f"ss{n:02d}") not in used:
-            return tag
-    raise Unsupported("all of ss01-ss20 are taken; pass a feature tag explicitly")
 
 
 def _rvrn_variants(gsub) -> dict[str, set[str]]:

@@ -2,6 +2,9 @@
 
     uv run python -m fontsecret patch IN.ttf OUT.ttf [--feature MASK | --always-on] [--suffix Masked]
     uv run python -m fontsecret verify ORIGINAL.ttf PATCHED.ttf
+
+By default, masking is opt-in under MASK and the family name gets a Masked suffix.
+Use --always-on for ccmp masking, or --suffix "" to keep the original family name.
 """
 
 import argparse
@@ -26,10 +29,12 @@ def main() -> None:
     p.add_argument("output", type=Path)
     p.add_argument("--patterns", type=Path, default=DEFAULT_PATTERNS)
     group = p.add_mutually_exclusive_group()
-    group.add_argument("--feature", help="feature tag to put masking under (default: highest free ssNN)")
+    group.add_argument("--feature", default=patcher.DEFAULT_FEATURE,
+                       help=f"feature tag to put masking under (default: {patcher.DEFAULT_FEATURE})")
     group.add_argument("--always-on", action="store_true",
                        help=f"put masking in {patcher.ALWAYS_ON}, which shapers always apply")
-    p.add_argument("--suffix", help="append to the family name (needed for OFL fonts with a Reserved Font Name)")
+    p.add_argument("--suffix", default="Masked",
+                   help='append to the family name (default: Masked); use "" to keep the original name')
 
     v = sub.add_parser("verify", help="check a patched font differs from its original only by masking")
     v.add_argument("original", type=Path)
@@ -38,8 +43,11 @@ def main() -> None:
     args = ap.parse_args()
     if args.command == "patch":
         font = TTFont(args.input)
-        report = patcher.patch(font, load(args.patterns),
-                               patcher.ALWAYS_ON if args.always_on else args.feature)
+        try:
+            report = patcher.patch(font, load(args.patterns),
+                                   patcher.ALWAYS_ON if args.always_on else args.feature)
+        except patcher.Unsupported as error:
+            p.error(str(error))
         if args.suffix:
             patcher.rename(font, args.suffix)
         args.output.parent.mkdir(parents=True, exist_ok=True)

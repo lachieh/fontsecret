@@ -14,7 +14,7 @@ import uharfbuzz as hb
 
 OUT = Path(__file__).resolve().parent.parent / "fonts" / "out"
 MASKED = ["CascadiaCode-Masked.ttf", "SourceCodePro-Regular-Masked.otf"]
-OPT_IN = {"CascadiaCode-SM.ttf": "ss18", "SourceCodePro-Regular-SM.otf": "ss20"}
+OPT_IN = {"CascadiaCode-MASK.ttf": "MASK", "SourceCodePro-Regular-MASK.otf": "MASK"}
 
 
 @cache
@@ -104,9 +104,9 @@ def test_opt_in_build_masks_only_with_its_feature(name, tag):
 
 SOURCES = {
     "CascadiaCode-Masked.ttf": "CascadiaCode.ttf",
-    "CascadiaCode-SM.ttf": "CascadiaCode.ttf",
+    "CascadiaCode-MASK.ttf": "CascadiaCode.ttf",
     "SourceCodePro-Regular-Masked.otf": "SourceCodePro-Regular.otf",
-    "SourceCodePro-Regular-SM.otf": "SourceCodePro-Regular.otf",
+    "SourceCodePro-Regular-MASK.otf": "SourceCodePro-Regular.otf",
 }
 PLAIN = [
     "a == b -> c != d <= e >>= f |> g :: h ... i // j /* k */ www &&",

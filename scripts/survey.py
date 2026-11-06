@@ -3,7 +3,7 @@
     uv run python scripts/survey.py fonts/nf-src docs/nerd-fonts-survey.md
 
 Per font: outline format, which stylistic sets it already uses, whether patching works,
-whether the masking cases draw as expected (always-on build), whether typing ever redraws,
+whether the masking cases draw as expected (always-on and opt-in MASK builds), whether typing ever redraws,
 whether plain code still shapes as in the original under each of its features, whether
 `fontsecret verify` passes, and OTS.
 """
@@ -78,6 +78,21 @@ def survey(path: Path) -> dict:
     data = buf.getvalue()
     patched, plain = hbfont(data), hbfont(path.read_bytes())
 
+    opt_in = TTFont(path)
+    try:
+        patcher.patch(opt_in, PATTERNS)
+        opt_in_data = io.BytesIO()
+        opt_in.save(opt_in_data)
+        optional = hbfont(opt_in_data.getvalue())
+        row["opt_in_failures"] = [
+            text for text, _ in CASES
+            if glyph_ids(optional, text, {}) != glyph_ids(plain, text, {})
+            or glyph_ids(optional, text, {patcher.DEFAULT_FEATURE: True})
+            != glyph_ids(patched, text, {})
+        ]
+    except Exception as e:  # noqa: BLE001 - the survey records every failure
+        row["opt_in_failures"] = [f"{type(e).__name__}: {e}"[:120]]
+
     row["case_failures"] = [t for t, want in CASES if render(patched, masks, t) != want]
 
     rng = random.Random(3310)
@@ -122,7 +137,7 @@ def main() -> None:
             rows.append(survey(path))
             r = rows[-1]
             print(r["font"], r.get("error") or f"cases={r['case_failures']} redraws={r['redraws']} "
-                  f"plain={r['plain_changed']} ots={r['ots']}/{r['ots_original']} skipped={len(r['skipped'])}", flush=True)
+                  f"opt-in={r['opt_in_failures']} plain={r['plain_changed']} ots={r['ots']}/{r['ots_original']} skipped={len(r['skipped'])}", flush=True)
 
     lines = [
         "| Font | Outlines | ss in use | Ligatures | Result | Notes |",
@@ -137,6 +152,8 @@ def main() -> None:
             if r["case_failures"]:
                 problems.append(f"{len(r['case_failures'])} cases differ: "
                                 + ", ".join(f"`{c}`" for c in r["case_failures"][:3]))
+            if r["opt_in_failures"]:
+                problems.append("opt-in MASK: " + "; ".join(r["opt_in_failures"][:3]))
             if r["redraws"]:
                 problems.append(f"{r['redraws']} lines redraw")
             if r["plain_changed"]:

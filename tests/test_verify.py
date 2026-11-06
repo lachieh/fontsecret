@@ -15,9 +15,9 @@ from fontsecret.verify import verify
 FONTS = Path(__file__).resolve().parent.parent / "fonts"
 BUILDS = {
     "CascadiaCode-Masked.ttf": "CascadiaCode.ttf",
-    "CascadiaCode-SM.ttf": "CascadiaCode.ttf",
+    "CascadiaCode-MASK.ttf": "CascadiaCode.ttf",
     "SourceCodePro-Regular-Masked.otf": "SourceCodePro-Regular.otf",
-    "SourceCodePro-Regular-SM.otf": "SourceCodePro-Regular.otf",
+    "SourceCodePro-Regular-MASK.otf": "SourceCodePro-Regular.otf",
 }
 TAMPER_ON = ["CascadiaCode-Masked.ttf", "SourceCodePro-Regular-Masked.otf"]
 
