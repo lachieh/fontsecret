@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>fontsecret social videos</title>
+<style>
+  @font-face { font-family: "Shoulders"; src: url("fonts/BigShoulders.ttf") format("truetype"); font-weight: 100 900; }
+  @font-face { font-family: "Cascadia Plain"; src: url("fonts/CascadiaCode.ttf") format("truetype"); font-weight: 200 700; }
+  @font-face { font-family: "Cascadia Masked"; src: url("fonts/CascadiaCode-Masked.ttf") format("truetype"); font-weight: 200 700; }
+  @font-face { font-family: "Cascadia Opt"; src: url("fonts/CascadiaCode-MASK.ttf") format("truetype"); font-weight: 200 700; }
+
+  :root {
+    --stock: #ff5b1a;
+    --ink: #161631;
+    --margin: 64px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1350px; overflow: hidden; background: var(--stock); }
+  ::selection { background: var(--ink); color: var(--stock); }
+
+  .sheet { position: relative; width: 1080px; height: 1350px; background: var(--stock); color: var(--ink); overflow: hidden; }
+  .fibres { position: absolute; inset: 0; mix-blend-mode: multiply; opacity: .55; pointer-events: none; }
+  #stage { position: absolute; inset: 0; }
+  #stage > * { position: absolute; }
+
+  .headline {
+    left: var(--margin); right: var(--margin);
+    font-family: "Shoulders"; font-weight: 900; font-variation-settings: "opsz" 72;
+    text-transform: uppercase; line-height: .88; letter-spacing: -.005em;
+  }
+
+  .code { left: var(--margin); white-space: pre; font-weight: 600; }
+  .plain { font-family: "Cascadia Plain"; }
+  .masked { font-family: "Cascadia Masked"; }
+  .opt { font-family: "Cascadia Opt"; }
+  .caret { width: .6em; height: 1.2em; background: var(--ink); }
+
+  /* A named code block: the file's name on a tab, its contents in a box below. */
+  .file { left: var(--margin); right: var(--margin); font-family: "Cascadia Plain"; font-weight: 600; }
+  .file-tab {
+    display: inline-block; position: relative; z-index: 1; margin-bottom: -7px;
+    border: 7px solid var(--ink); border-bottom: 0; border-radius: 14px 14px 0 0;
+    padding: 10px 26px 12px; font-size: 34px; background: var(--stock);
+  }
+  .file-body { border: 7px solid var(--ink); border-radius: 0 14px 14px 14px; padding: 22px 28px; font-size: 44px; line-height: 1.4; white-space: pre; }
+  .file-cursor { display: inline-block; width: .6em; line-height: 1.25; text-align: center; }
+  .file-cursor.on { background: var(--ink); color: var(--stock); }
+
+  .slug {
+    left: var(--margin); right: var(--margin); bottom: 46px;
+    font-family: "Cascadia Plain"; font-weight: 600; font-size: 30px;
+  }
+  .rule { left: var(--margin); right: var(--margin); height: 7px; background: var(--ink); }
+  .name { left: var(--margin); font-family: "Cascadia Plain"; font-weight: 700; font-size: 84px; letter-spacing: -.02em; line-height: 1; }
+  .says { left: var(--margin); font-family: "Shoulders"; font-weight: 800; font-variation-settings: "opsz" 40; font-size: 46px; text-transform: uppercase; letter-spacing: .02em; line-height: 1; }
+  .label { left: var(--margin); font-family: "Shoulders"; font-weight: 800; font-variation-settings: "opsz" 24; font-size: 34px; letter-spacing: .14em; text-transform: uppercase; }
+
+  .roller { left: 28px; right: 28px; height: 128px; border-radius: 14px; overflow: hidden; }
+  .roller i { position: absolute; left: 0; right: 0; background: var(--ink); }
+
+  .sel { background: var(--ink); }
+  .keys { display: flex; gap: 16px; }
+  .key {
+    width: 100px; height: 100px; border: 7px solid var(--ink); border-radius: 14px;
+    display: grid; place-items: center;
+    font-family: "Shoulders"; font-weight: 900; font-size: 68px; line-height: 1;
+  }
+  .key svg { width: 52px; height: 52px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs id="defs">
+    <filter id="fibre">
+      <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="3" seed="11"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 .91  0 0 0 0 .28  0 0 0 0 .05  0 0 0 -1.6 1.05"/>
+    </filter>
+  </defs>
+</svg>
+
+<main class="sheet">
+  <svg class="fibres" width="1080" height="1350" aria-hidden="true"><rect width="1080" height="1350" filter="url(#fibre)"/></svg>
+  <div id="stage"></div>
+</main>
+
+<script>
+const FPS = 30, FRAMES = 180;
+const CELL = 0.6; // Cascadia Code advance, in em
+
+const easeOut = p => p >= 1 ? 1 : 1 - Math.pow(2, -10 * p);
+const easeInOut = q => q < .5 ? 4 * q ** 3 : 1 - (-2 * q + 2) ** 3 / 2;
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const prog = (t, start, dur) => clamp((t - start) / dur);
+
+function node(html) {
+  const t = document.createElement("template");
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+
+// Ink on stock: fine grain and broad blotches open voids in the ink. `coverage` 0..1 is how
+// far the impression has landed. Code-size text gets fewer voids so its dots stay solid.
+let filters = 0;
+function press(el, { fine = false } = {}) {
+  const id = `press${filters++}`;
+  const f = document.createElementNS("http://www.w3.org/2000/svg", "filter");
+  f.setAttribute("id", id);
+  f.setAttribute("x", "-4%"); f.setAttribute("y", "-25%");
+  f.setAttribute("width", "108%"); f.setAttribute("height", "150%");
+  f.innerHTML = `
+    <feTurbulence type="fractalNoise" baseFrequency="1.35" numOctaves="2" seed="${7 + filters}" result="grain"/>
+    <feTurbulence type="fractalNoise" baseFrequency=".011" numOctaves="2" seed="${3 + filters}" result="blot"/>
+    <feComposite in="grain" in2="blot" operator="arithmetic" k2="1" k3=".75" result="noise"/>
+    <feColorMatrix in="noise" type="matrix" result="voids" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 40"/>
+    <feComposite in="SourceGraphic" in2="voids" operator="in" result="inked"/>
+    <feTurbulence type="fractalNoise" baseFrequency=".05" seed="3" result="warp"/>
+    <feDisplacementMap in="inked" in2="warp" scale="2" xChannelSelector="R" yChannelSelector="G"/>`;
+  document.getElementById("defs").append(f);
+  el.style.filter = `url(#${id})`;
+  const matrix = f.querySelector('[result="voids"]');
+  // Ink sits wherever the noise is below the threshold: a hard edge, so voids show bare stock.
+  const full = fine ? 1.12 : 1.0;
+  return coverage => {
+    const c = clamp(coverage);
+    el.hidden = c <= 0;
+    const threshold = 0.55 + (full - 0.55) * c;
+    matrix.setAttribute("values", `0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 ${(40 * threshold).toFixed(2)}`);
+  };
+}
+
+// The impression: ink coverage builds from sparse grain to solid.
+// With no start time the element is already printed.
+function impression(el, opts) {
+  const set = press(el, opts);
+  return (t, start, dur = 0.24) => set(start === undefined ? 1 : t < start ? 0 : easeOut(prog(t, start, dur)));
+}
+
+// A headline arrives as a gradient wipe from the top, its edge tilted -5 degrees.
+function wipe(el, p, angle = 175, soft = 140) {
+  const e = -soft + (100 + 2 * soft) * p;
+  const m = p >= 1 ? "none" : `linear-gradient(${angle}deg, #000 ${e - soft}%, transparent ${e}%)`;
+  el.style.maskImage = m;
+  el.style.webkitMaskImage = m;
+}
+
+function headline(stage, html, top, size, lines) {
+  const h = node(`<h1 class="headline" style="top:${top}px;font-size:${size}px">${html}</h1>`);
+  stage.append(h);
+  const ink = press(h);
+  return (t, start) => {
+    const p = easeInOut(prog(t, start, 0.35));
+    ink(p > 0 ? 1 : 0);
+    wipe(h, p);
+  };
+}
+
+
+const cmd = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></svg>`;
+
+function slug(stage, text = () => "Cascadia Code, patched") {
+  const s = node(`<div class="slug"></div>`);
+  stage.append(s);
+  const ink = impression(s, { fine: true });
+  return t => { s.textContent = text(t); ink(t); };
+}
+
+function lockup(stage, top, start = 4.3) {
+  const rule = node(`<div class="rule" style="top:${top}px"></div>`);
+  const name = node(`<div class="name" style="top:${top + 34}px">fontsecret</div>`);
+  const says = node(`<div class="says" style="top:${top + 134}px">Patch any font to mask any secret</div>`);
+  stage.append(rule, name, says);
+  const ruleInk = impression(rule), nameInk = impression(name), saysInk = impression(says);
+  return t => {
+    wipe(rule, easeInOut(prog(t, start, 0.35)), 90);   // the same soft gradient wipe, left to right
+    ruleInk(t, start, 0.01);
+    nameInk(t, start + 0.15);
+    saysInk(t, start + 0.35);
+  };
+}
+
+// A: a secret shows on stream; turning on MASK in the editor's config switches it to dots.
+function videoA(stage) {
+  const head = headline(stage, "Showing a secret<br>on stream?", 72, 132, 2);
+  const size = 60, y1 = 355, y2 = 440, cell = CELL * size, x0 = 64;
+  const prompt = "$ gh auth token";
+  const token = "ghp_R8xKq2mVb7TzW9nLc4YdPq0sHj3uFa1eXw";
+  const l1 = node(`<div class="code opt" style="top:${y1}px;font-size:${size}px"></div>`);
+  const l2 = node(`<div class="code opt" style="top:${y2}px;font-size:${size}px"></div>`);
+  const caret = node(`<div class="caret" style="font-size:${size}px"></div>`);
+  // The block cursor sits over the next character, here the closing bracket, and blinks by
+  // swapping that character's colours, so nothing around it moves.
+  const field = node(`<div class="file" style="top:${y2 + 120}px">
+    <div class="file-tab">youreditor.config.yaml</div>
+    <div class="file-body">font:
+  family: cascadia-code-fontsecret
+  features: [<span class="file-text"></span><span class="file-cursor">]</span></div>
+  </div>`);
+  stage.append(l1, l2, caret, field);
+  const l1Ink = impression(l1, { fine: true }), l2Ink = impression(l2, { fine: true });
+  const caretInk = impression(caret, { fine: true }), fieldInk = impression(field, { fine: true });
+  const fieldText = field.querySelector(".file-text"), cursor = field.querySelector(".file-cursor");
+  const value = "MASK";
+  const low = headline(stage, "No problem.", 915, 124, 1);
+  const lock = lockup(stage, 1070, 4.4);
+  return t => {
+    head(t, 0.05);
+    const n1 = Math.floor(clamp((t - 0.5) / 0.45) * prompt.length);
+    const shown = t >= 1.15;  // the token prints all at once
+    l1.textContent = prompt.slice(0, n1);
+    l2.textContent = shown ? token : "";
+    l1Ink(t); l2Ink(t);
+    // The caret leads the first line while it is typed.
+    caretInk(t);
+    caret.style.left = `${x0 + n1 * cell}px`;
+    caret.style.top = `${y1 - 2}px`;
+    caret.hidden = t < 0.45 || shown;
+    // A long beat with the secret on show, then the config, then MASK is typed into it.
+    fieldInk(t, 2.0);
+    const typed = Math.floor(clamp((t - 2.4) / 0.36) * value.length);
+    fieldText.textContent = value.slice(0, typed);
+    const typing = t >= 2.4 && t < 2.8;
+    cursor.classList.toggle("on", typing || Math.floor((t - 2.0) * 2.5) % 2 === 0);
+    const on = typed === value.length ? '"MASK" 1' : "normal";
+    l1.style.fontFeatureSettings = on; l2.style.fontFeatureSettings = on;
+    low(t, 3.35);   // a pause after the switch to dots, then the answer
+    lock(t);
+  };
+}
+
+
+// B: the same .env in the plain font, one roller pass, secrets go to dots.
+function videoB(stage) {
+  const head = headline(stage, "Patch any font.", 72, 150, 1);
+  const env = ["PORT=3000", "STRIPE_KEY=sk_live_51Hq8ZtD3vNk2Wy", "AWS_KEY=AKIAIOSFODNN7EXAMPLE", "DB_PASSWORD=correct-horse"].join("\n");
+  const size = 54, top = 340, lh = 1.42, height = 4 * size * lh;
+  const plain = node(`<div class="code plain" style="top:${top}px;font-size:${size}px;line-height:${lh}"></div>`);
+  const masked = node(`<div class="code masked" style="top:${top}px;font-size:${size}px;line-height:${lh}"></div>`);
+  plain.textContent = env; masked.textContent = env;
+  // An inked roller: a solid body with stock bands where the light turns its curve.
+  const roller = node(`<div class="roller"><i style="top:0;bottom:0"></i></div>`);
+  for (const [y, h] of [[20, 12], [40, 6], [54, 3], [104, 4]]) roller.append(node(`<b style="position:absolute;left:0;right:0;top:${y}px;height:${h}px;background:var(--stock)"></b>`));
+  stage.append(plain, masked, roller);
+  const plainInk = impression(plain, { fine: true }), maskedInk = impression(masked, { fine: true });
+  const rollerInk = impression(roller);
+  const low = headline(stage, "Mask any secrets.", 800, 124, 1);
+  const from = top - 150, to = top + height + 30;
+  const lock = lockup(stage, 1070, 4.4);
+  return t => {
+    head(t, 0.05);
+    // The .env prints in the plain font once the title is up, and holds for a long beat.
+    plainInk(t, 0.55); maskedInk(t, 0.55);
+    const y = from + (to - from) * easeInOut(prog(t, 2.0, 0.75));
+    rollerInk(t);
+    roller.hidden = t < 1.95 || t > 2.8;
+    roller.style.top = `${y}px`;
+    const edge = clamp(y + 64 - top, 0, height);       // inked down to the roller's line of contact
+    masked.style.clipPath = `inset(-20px -200px ${height - edge}px -20px)`;
+    plain.style.clipPath = `inset(${edge}px -200px -20px -20px)`;
+    low(t, 3.35);   // a pause after the pass, then the answer
+    lock(t);
+  };
+}
+
+// C: a masked key copies as the real text.
+function videoC(stage) {
+  const head = headline(stage, "Need to copy<br>text?", 72, 132, 2);
+  const line = "Bearer 9f3KxQ2mLp8RtV6wZb1N";
+  const size = 58, y = 380;
+  const full = line.length * CELL * size;
+  const sel = node(`<div class="sel" style="left:var(--margin);top:${y - 6}px;height:${size * 1.36}px"></div>`);
+  const shown = node(`<div class="code masked" style="top:${y}px;font-size:${size}px"></div>`);
+  const knock = node(`<div class="code masked" style="top:${y}px;font-size:${size}px;color:var(--stock)"></div>`);
+  shown.textContent = line; knock.textContent = line;
+  const keys = node(`<div class="keys" style="left:var(--margin);top:${y + 100}px"><div class="key">${cmd}</div><div class="key">C</div></div>`);
+  const label = node(`<div class="label" style="top:${y + 236}px">Clipboard</div>`);
+  const pasted = node(`<div class="code plain" style="top:${y + 278}px;font-size:${size}px;font-weight:700"></div>`);
+  pasted.textContent = line;
+  stage.append(sel, shown, knock, keys, label, pasted);
+  const selInk = impression(sel), shownInk = impression(shown, { fine: true }), keysInk = impression(keys);
+  const labelInk = impression(label), pastedInk = impression(pasted, { fine: true });
+  const low = headline(stage, "No problem.", 915, 124, 1);
+  const lock = lockup(stage, 1070, 4.4);
+  return t => {
+    head(t, 0.05);
+    // The masked key prints once the title is up, and holds for a long beat.
+    shownInk(t, 0.55);
+    const w = easeOut(prog(t, 1.95, 0.45)) * (full + 8);
+    sel.style.width = `${w}px`;
+    selInk(t, 1.95, 0.01);
+    knock.hidden = t < 1.95;
+    knock.style.clipPath = `inset(-10px ${Math.max(0, full - w)}px -10px -10px)`;
+    keysInk(t, 2.45);
+    labelInk(t, 2.75);
+    pastedInk(t, 2.8);
+    low(t, 3.35);   // a pause after the paste, then the answer
+    lock(t);
+  };
+}
+
+
+const VIDEOS = { a: videoA, b: videoB, c: videoC };
+const which = new URLSearchParams(location.search).get("v") || "a";
+const draw = VIDEOS[which](document.getElementById("stage"));
+
+window.render = f => draw(f / FPS);
+window.ready = Promise.all([
+  document.fonts.load('900 100px "Shoulders"'),
+  document.fonts.load('800 30px "Shoulders"'),
+  document.fonts.load('600 40px "Cascadia Plain"'),
+  document.fonts.load('700 40px "Cascadia Plain"'),
+  document.fonts.load('600 40px "Cascadia Masked"'),
+  document.fonts.load('600 40px "Cascadia Opt"'),
+]).then(() => document.fonts.ready);
+
+// In a normal browser, play the loop in real time.
+if (!navigator.webdriver) {
+  const t0 = performance.now();
+  const tick = now => { window.render(Math.floor(((now - t0) / 1000) * FPS) % FRAMES); requestAnimationFrame(tick); };
+  window.ready.then(() => requestAnimationFrame(tick));
+} else {
+  window.render(0);
+}
+</script>
+</body>
+</html>

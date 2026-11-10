@@ -1,0 +1,273 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-09T00:00:00Z",
+  "title": "Design System: fontsecret",
+  "extensions": {
+    "colorMeta": {
+      "stock": {
+        "role": "primary",
+        "displayName": "Blaze Stock",
+        "canonical": "oklch(68.3% 0.211 38.5)",
+        "tonalRamp": [
+          "#1b0300",
+          "#431101",
+          "#6e2407",
+          "#a13303",
+          "#d8490b",
+          "#fb784d",
+          "#ffb79f",
+          "#ffe9e2"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Press Ink",
+        "canonical": "oklch(21.6% 0.052 281.1)",
+        "tonalRamp": [
+          "#080720",
+          "#20203c",
+          "#3b3c5b",
+          "#585a7b",
+          "#7a7d9f",
+          "#9ea1c5",
+          "#c4c7ed",
+          "#ebedfe"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline-two-line": {
+        "displayName": "Wood Type Answer, two lines",
+        "purpose": "Answering line at 120 px when it breaks to two lines."
+      },
+      "keycap": {
+        "displayName": "Keycap Letter",
+        "purpose": "Single Shoulders 900 letter on a 100 px keycap, 68 px."
+      },
+      "code-masked": {
+        "displayName": "Hero Code, Masked",
+        "purpose": "Cascadia Masked: the patched Cascadia Code that draws secrets as dots."
+      },
+      "display": {
+        "displayName": "Wood Type Display",
+        "purpose": "Opening claim at 176 px from the top margin; one or two uppercase lines."
+      },
+      "headline": {
+        "displayName": "Wood Type Answer",
+        "purpose": "Answering line below the code, 104 px on one line."
+      },
+      "title": {
+        "displayName": "Lockup Line",
+        "purpose": "The lockup's one-line uppercase description."
+      },
+      "label": {
+        "displayName": "Container Label",
+        "purpose": "Tracked uppercase name for a container of content (the clipboard); never a kicker."
+      },
+      "code": {
+        "displayName": "Hero Code",
+        "purpose": "Cascadia Plain, the stock Cascadia Code, 54-60 px; the focal hub of every sheet alongside Cascadia Masked."
+      },
+      "name": {
+        "displayName": "Name",
+        "purpose": "fontsecret in the lockup, lowercase, Cascadia Code 700 at 84 px."
+      },
+      "slug": {
+        "displayName": "Printer's Slug",
+        "purpose": "Frame counter and font credit at the foot, tabular figures."
+      }
+    },
+    "shadows": [],
+    "textures": [
+      {
+        "name": "fibre",
+        "value": "feTurbulence fractalNoise baseFrequency .85 numOctaves 3, colour matrix toward rgb(.91,.28,.05), mix-blend-mode multiply, opacity .55",
+        "purpose": "Paper fibre texture across the full stock."
+      },
+      {
+        "name": "ink-voids",
+        "value": "grain (fractalNoise 1.35) + .75 x blot (fractalNoise .011); void alpha -40*noise + 40*threshold; feDisplacementMap scale 2",
+        "purpose": "Hard-edged holes of bare stock in every inked element; no depth."
+      }
+    ],
+    "motion": [
+      {
+        "name": "impression",
+        "value": "0.24s, ease-out expo 1 - 2^(-10p); void threshold 0.55 -> 1.0 (display) or 1.12 (code-size text)",
+        "purpose": "The only entrance: coverage builds from sparse grain to solid."
+      },
+      {
+        "name": "rule-draw",
+        "value": "scaleX 0 -> 1, 0.35s, ease-out expo, transform-origin left",
+        "purpose": "Lockup rule drawn left to right."
+      },
+      {
+        "name": "roller-pass",
+        "value": "1.5s, cubic ease-in-out (4q^3 / 1-(-2q+2)^3/2)",
+        "purpose": "One inking pass down the code block, swapping stock sorts for patched sorts at the line of contact."
+      },
+      {
+        "name": "selection-sweep",
+        "value": "0.7s, ease-out expo",
+        "purpose": "Ink selection block sweeping right with the reversed text clipped to it."
+      },
+      {
+        "name": "caret-blink",
+        "value": "2.5 Hz, on/off",
+        "purpose": "Caret blink once streaming stops."
+      },
+      {
+        "name": "lockup-cue",
+        "value": "rule 4.3s, name 4.45s, line 4.65s of a 6s, 30fps, 180-frame loop",
+        "purpose": "The closing stamp lands in the last 1.7s of every sheet."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sheet",
+        "value": "1080x1350 fixed (4:5), no responsive behaviour"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Wood Type Headline",
+      "kind": "custom",
+      "refersTo": "headline",
+      "description": "Big Shoulders 900 uppercase at poster scale, impressed into the stock.",
+      "html": "<svg width=\"0\" height=\"0\" style=\"position:absolute\"><filter id=\"ds-press\" x=\"-4%\" y=\"-25%\" width=\"108%\" height=\"150%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"1.35\" numOctaves=\"2\" seed=\"8\" result=\"grain\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".011\" numOctaves=\"2\" seed=\"4\" result=\"blot\"/><feComposite in=\"grain\" in2=\"blot\" operator=\"arithmetic\" k2=\"1\" k3=\".75\" result=\"noise\"/><feColorMatrix in=\"noise\" type=\"matrix\" result=\"voids\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 48\"/><feComposite in=\"SourceGraphic\" in2=\"voids\" operator=\"in\" result=\"inked\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".05\" seed=\"3\" result=\"warp\"/><feDisplacementMap in=\"inked\" in2=\"warp\" scale=\"2\" xChannelSelector=\"R\" yChannelSelector=\"G\"/></filter></svg><div class=\"ds-sheet\"><h1 class=\"ds-headline\">Stream<br>a token.</h1></div>",
+      "css": ".ds-sheet { background: #ff5b1a; color: #161631; padding: 32px 64px; } .ds-headline { margin: 0; font-family: Shoulders, Impact, sans-serif; font-weight: 900; font-variation-settings: 'opsz' 72; font-size: 96px; line-height: .88; letter-spacing: -.005em; text-transform: uppercase; color: #161631; filter: url(#ds-press); }"
+    },
+    {
+      "name": "Code Line",
+      "kind": "custom",
+      "refersTo": "code-line",
+      "description": "The hero: real Cascadia Code (stock or patched) at the margin, with an ink caret.",
+      "html": "<svg width=\"0\" height=\"0\" style=\"position:absolute\"><filter id=\"ds-press\" x=\"-4%\" y=\"-25%\" width=\"108%\" height=\"150%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"1.35\" numOctaves=\"2\" seed=\"8\" result=\"grain\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".011\" numOctaves=\"2\" seed=\"4\" result=\"blot\"/><feComposite in=\"grain\" in2=\"blot\" operator=\"arithmetic\" k2=\"1\" k3=\".75\" result=\"noise\"/><feColorMatrix in=\"noise\" type=\"matrix\" result=\"voids\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 48\"/><feComposite in=\"SourceGraphic\" in2=\"voids\" operator=\"in\" result=\"inked\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".05\" seed=\"3\" result=\"warp\"/><feDisplacementMap in=\"inked\" in2=\"warp\" scale=\"2\" xChannelSelector=\"R\" yChannelSelector=\"G\"/></filter></svg><div class=\"ds-sheet\"><div class=\"ds-code\">ghp_R8xK••••••<span class=\"ds-caret\"></span></div></div>",
+      "css": ".ds-sheet { background: #ff5b1a; color: #161631; padding: 32px 64px; } .ds-code { font-family: 'Cascadia Masked', monospace; font-weight: 600; font-size: 40px; white-space: pre; color: #161631; filter: url(#ds-press); } .ds-caret { display: inline-block; width: .6em; height: 1.2em; vertical-align: -.25em; background: #161631; animation: ds-blink .8s steps(1) infinite; } @keyframes ds-blink { 50% { opacity: 0; } }"
+    },
+    {
+      "name": "Selection",
+      "kind": "custom",
+      "refersTo": "selection",
+      "description": "Solid ink block sweeping right; selected text reprinted in stock.",
+      "html": "<svg width=\"0\" height=\"0\" style=\"position:absolute\"><filter id=\"ds-press\" x=\"-4%\" y=\"-25%\" width=\"108%\" height=\"150%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"1.35\" numOctaves=\"2\" seed=\"8\" result=\"grain\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".011\" numOctaves=\"2\" seed=\"4\" result=\"blot\"/><feComposite in=\"grain\" in2=\"blot\" operator=\"arithmetic\" k2=\"1\" k3=\".75\" result=\"noise\"/><feColorMatrix in=\"noise\" type=\"matrix\" result=\"voids\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 48\"/><feComposite in=\"SourceGraphic\" in2=\"voids\" operator=\"in\" result=\"inked\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".05\" seed=\"3\" result=\"warp\"/><feDisplacementMap in=\"inked\" in2=\"warp\" scale=\"2\" xChannelSelector=\"R\" yChannelSelector=\"G\"/></filter></svg><div class=\"ds-sheet\"><div class=\"ds-sel\">Bearer 9f3K••••••••</div></div>",
+      "css": ".ds-sheet { background: #ff5b1a; color: #161631; padding: 32px 64px; } .ds-sel { display: inline-block; padding: 6px 4px 10px 0; background: #161631; color: #ff5b1a; font-family: 'Cascadia Masked', monospace; font-weight: 600; font-size: 40px; white-space: pre; filter: url(#ds-press); }"
+    },
+    {
+      "name": "Keycaps",
+      "kind": "custom",
+      "refersTo": "keycap",
+      "description": "A pair of keys stroked in ink with softly rounded corners, wood-type or SVG glyph centred.",
+      "html": "<svg width=\"0\" height=\"0\" style=\"position:absolute\"><filter id=\"ds-press\" x=\"-4%\" y=\"-25%\" width=\"108%\" height=\"150%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"1.35\" numOctaves=\"2\" seed=\"8\" result=\"grain\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".011\" numOctaves=\"2\" seed=\"4\" result=\"blot\"/><feComposite in=\"grain\" in2=\"blot\" operator=\"arithmetic\" k2=\"1\" k3=\".75\" result=\"noise\"/><feColorMatrix in=\"noise\" type=\"matrix\" result=\"voids\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 48\"/><feComposite in=\"SourceGraphic\" in2=\"voids\" operator=\"in\" result=\"inked\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".05\" seed=\"3\" result=\"warp\"/><feDisplacementMap in=\"inked\" in2=\"warp\" scale=\"2\" xChannelSelector=\"R\" yChannelSelector=\"G\"/></filter></svg><div class=\"ds-sheet\"><div class=\"ds-keys\"><div class=\"ds-key\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3\"/></svg></div><div class=\"ds-key\">C</div></div></div>",
+      "css": ".ds-sheet { background: #ff5b1a; color: #161631; padding: 32px 64px; } .ds-keys { display: flex; gap: 16px; filter: url(#ds-press); } .ds-key { width: 100px; height: 100px; border: 7px solid #161631; border-radius: 14px; display: grid; place-items: center; background: #ff5b1a; color: #161631; font-family: Shoulders, Impact, sans-serif; font-weight: 900; font-size: 68px; line-height: 1; } .ds-key svg { width: 52px; height: 52px; }"
+    },
+    {
+      "name": "Roller",
+      "kind": "custom",
+      "refersTo": "roller",
+      "description": "Inking roller: a solid ink body with three stock highlight bands across its upper curve.",
+      "html": "<svg width=\"0\" height=\"0\" style=\"position:absolute\"><filter id=\"ds-press\" x=\"-4%\" y=\"-25%\" width=\"108%\" height=\"150%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"1.35\" numOctaves=\"2\" seed=\"8\" result=\"grain\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".011\" numOctaves=\"2\" seed=\"4\" result=\"blot\"/><feComposite in=\"grain\" in2=\"blot\" operator=\"arithmetic\" k2=\"1\" k3=\".75\" result=\"noise\"/><feColorMatrix in=\"noise\" type=\"matrix\" result=\"voids\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 48\"/><feComposite in=\"SourceGraphic\" in2=\"voids\" operator=\"in\" result=\"inked\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".05\" seed=\"3\" result=\"warp\"/><feDisplacementMap in=\"inked\" in2=\"warp\" scale=\"2\" xChannelSelector=\"R\" yChannelSelector=\"G\"/></filter></svg><div class=\"ds-sheet\"><div class=\"ds-roller\"><b style=\"top:22px;height:12px\"></b><b style=\"top:42px;height:6px\"></b><b style=\"top:56px;height:3px\"></b></div></div>",
+      "css": ".ds-sheet { background: #ff5b1a; color: #161631; padding: 32px 64px; } .ds-roller { position: relative; height: 128px; margin: 0 -84px; background: #161631; filter: url(#ds-press); } .ds-roller b { position: absolute; left: 0; right: 0; background: #ff5b1a; }"
+    },
+    {
+      "name": "Container Label",
+      "kind": "chip",
+      "refersTo": "label",
+      "description": "Tracked uppercase wood type naming a container of content, set above it.",
+      "html": "<svg width=\"0\" height=\"0\" style=\"position:absolute\"><filter id=\"ds-press\" x=\"-4%\" y=\"-25%\" width=\"108%\" height=\"150%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"1.35\" numOctaves=\"2\" seed=\"8\" result=\"grain\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".011\" numOctaves=\"2\" seed=\"4\" result=\"blot\"/><feComposite in=\"grain\" in2=\"blot\" operator=\"arithmetic\" k2=\"1\" k3=\".75\" result=\"noise\"/><feColorMatrix in=\"noise\" type=\"matrix\" result=\"voids\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 48\"/><feComposite in=\"SourceGraphic\" in2=\"voids\" operator=\"in\" result=\"inked\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".05\" seed=\"3\" result=\"warp\"/><feDisplacementMap in=\"inked\" in2=\"warp\" scale=\"2\" xChannelSelector=\"R\" yChannelSelector=\"G\"/></filter></svg><div class=\"ds-sheet\"><div class=\"ds-label\">Clipboard</div><div class=\"ds-paste\">Bearer 9f3KxQ2mLp8R</div></div>",
+      "css": ".ds-sheet { background: #ff5b1a; color: #161631; padding: 32px 64px; } .ds-label { font-family: Shoulders, Impact, sans-serif; font-weight: 800; font-variation-settings: 'opsz' 24; font-size: 34px; letter-spacing: .14em; text-transform: uppercase; color: #161631; filter: url(#ds-press); } .ds-paste { font-family: 'Cascadia Plain', monospace; font-weight: 700; font-size: 40px; color: #161631; filter: url(#ds-press); }"
+    },
+    {
+      "name": "Printer's Slug",
+      "kind": "nav",
+      "refersTo": "slug",
+      "description": "Frame counter flush left, font credit flush right, at the foot of the sheet.",
+      "html": "<svg width=\"0\" height=\"0\" style=\"position:absolute\"><filter id=\"ds-press\" x=\"-4%\" y=\"-25%\" width=\"108%\" height=\"150%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"1.35\" numOctaves=\"2\" seed=\"8\" result=\"grain\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".011\" numOctaves=\"2\" seed=\"4\" result=\"blot\"/><feComposite in=\"grain\" in2=\"blot\" operator=\"arithmetic\" k2=\"1\" k3=\".75\" result=\"noise\"/><feColorMatrix in=\"noise\" type=\"matrix\" result=\"voids\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 48\"/><feComposite in=\"SourceGraphic\" in2=\"voids\" operator=\"in\" result=\"inked\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".05\" seed=\"3\" result=\"warp\"/><feDisplacementMap in=\"inked\" in2=\"warp\" scale=\"2\" xChannelSelector=\"R\" yChannelSelector=\"G\"/></filter></svg><div class=\"ds-sheet\"><div class=\"ds-slug\"><span>FRAME 061/180</span><span>Cascadia Code, patched</span></div></div>",
+      "css": ".ds-sheet { background: #ff5b1a; color: #161631; padding: 32px 64px; } .ds-slug { display: flex; justify-content: space-between; font-family: 'Cascadia Plain', monospace; font-weight: 600; font-size: 30px; font-variant-numeric: tabular-nums; color: #161631; filter: url(#ds-press); }"
+    },
+    {
+      "name": "Lockup",
+      "kind": "card",
+      "refersTo": "lockup-name",
+      "description": "Closing stamp: 7px ink rule, fontsecret in Cascadia Code 700, one-line wood-type description.",
+      "html": "<svg width=\"0\" height=\"0\" style=\"position:absolute\"><filter id=\"ds-press\" x=\"-4%\" y=\"-25%\" width=\"108%\" height=\"150%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"1.35\" numOctaves=\"2\" seed=\"8\" result=\"grain\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".011\" numOctaves=\"2\" seed=\"4\" result=\"blot\"/><feComposite in=\"grain\" in2=\"blot\" operator=\"arithmetic\" k2=\"1\" k3=\".75\" result=\"noise\"/><feColorMatrix in=\"noise\" type=\"matrix\" result=\"voids\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -40 48\"/><feComposite in=\"SourceGraphic\" in2=\"voids\" operator=\"in\" result=\"inked\"/><feTurbulence type=\"fractalNoise\" baseFrequency=\".05\" seed=\"3\" result=\"warp\"/><feDisplacementMap in=\"inked\" in2=\"warp\" scale=\"2\" xChannelSelector=\"R\" yChannelSelector=\"G\"/></filter></svg><div class=\"ds-sheet\"><div class=\"ds-lockup\"><div class=\"ds-rule\"></div><div class=\"ds-name\">fontsecret</div><div class=\"ds-says\">Patches any font to draw secrets as dots</div></div></div>",
+      "css": ".ds-sheet { background: #ff5b1a; color: #161631; padding: 32px 64px; } .ds-lockup { color: #161631; filter: url(#ds-press); } .ds-rule { height: 7px; background: #161631; transform-origin: left center; transition: transform .35s cubic-bezier(.16,1,.3,1); } .ds-lockup:hover .ds-rule { transform: scaleX(.98); } .ds-name { margin-top: 27px; font-family: 'Cascadia Plain', monospace; font-weight: 700; font-size: 84px; letter-spacing: -.02em; line-height: 1; } .ds-says { margin-top: 16px; font-family: Shoulders, Impact, sans-serif; font-weight: 800; font-variation-settings: 'opsz' 40; font-size: 46px; letter-spacing: .02em; line-height: 1; text-transform: uppercase; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Composing Room Proof",
+    "overview": "Every frame is a press proof: fluorescent orange stock, one blue-black ink, pulled by hand. A font is a set of metal sorts, and `fontsecret` swaps a secret's sorts for a dot as they are set. The system exists to show that mechanism on a poster, never to dress up a terminal screenshot; the code is not a picture of code, it is the real patched Cascadia Code shaped live by the browser, inked like everything else on the sheet.\n\nThe sheet is a full-bleed 1080 × 1350 (4:5) field with a single left margin that everything hangs from. Wood type shouts across the top third, the code line is the hero across the middle, a second wood-type line answers it, and the `fontsecret` lockup and a printer's slug close the foot. Density comes from texture, not tone: paper fibres in the stock and hard-edged voids where the ink missed. There are exactly two colours: no grays, no gradients, no shading, no device chrome.\n\nMotion is printing. Elements do not fade, slide or scale into place; they are *impressed*: ink coverage builds from sparse grain to solid in a quarter of a second. The only things that travel are tools of the press and the desk: an inking roller, a selection sweep, a caret.",
+    "keyCharacteristics": [
+      "Two colours only: orange stock and blue-black ink, with nothing in between.",
+      "Wood-type display (Shoulders, Big Shoulders 900) against the real patched monospace (Cascadia Code).",
+      "One left margin (64 px) for every element; one focal hub per sheet (the code line).",
+      "Texture everywhere: fibre noise in the stock, hard-thresholded grain and blotch voids in the ink.",
+      "The impression is the only entrance; the roller and the selection are the only sweeps."
+    ],
+    "rules": [
+      {
+        "name": "The Two Inks Rule",
+        "body": "Stock and ink are the only colours on the sheet. Every pixel is one or the other (the fibre texture aside); there is no shade, tint, blend or mid-tone used as a design element.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reverse Rule",
+        "body": "When ink fills an area (selection), the type inside it prints in stock, not in a lighter ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Real Sorts Rule",
+        "body": "Masked text is always set in Cascadia Masked and shaped by the browser. Never draw dots, overlay them, or substitute characters in the source string; the dots must come from the font.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lowercase Name Rule",
+        "body": "`fontsecret` is set in the code face, lowercase, wherever it appears; it is never set in the wood type.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Margin Rule",
+        "body": "Every element starts at the 64 px left margin; type and rules that span the sheet end at the 64 px right margin. One thing may cross the right trim: a secret (see the Bleed, Never Wrap Rule).",
+        "section": "layout"
+      },
+      {
+        "name": "The Bleed, Never Wrap Rule",
+        "body": "A code line is set `white-space: pre` and never wraps. A key longer than the measure bleeds off the right edge of the sheet, because a key broken across two lines leaves the shaping run and shows its real characters.",
+        "section": "layout"
+      },
+      {
+        "name": "The One Hub Rule",
+        "body": "Each sheet has one focal hub, the code line; the headlines frame it above and below, and the lockup only lands after it has done its work.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Sheet Rule",
+        "body": "No `box-shadow`, offset shadows, glows, blurs, deboss edges or shaded copies. Depth is never drawn; the press only leaves ink or bare stock.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Fine Forme Rule",
+        "body": "Code-size text prints at a fuller threshold (1.12) than display type (1.0), so its dots stay solid and readable while the wood type keeps visible voids.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep every sheet to stock and ink, with ink voids that cut to bare stock.",
+      "**Do** run every entrance through the impression (0.24 s exponential ease-out, threshold 0.55 to full).",
+      "**Do** set masked text in Cascadia Masked and let the browser shape it.",
+      "**Do** hang every element from the 64 px left margin and keep the lockup at 1010 px and the slug 46 px from the foot.",
+      "**Do** let a long key bleed off the right edge rather than wrap.",
+      "**Do** report state changes in the slug's text."
+    ],
+    "donts": [
+      "**Don't** introduce a third colour, a gray, a tint, a shade or a gradient fill.",
+      "**Don't** fade, slide or scale elements in; type is impressed, not animated.",
+      "**Don't** draw or overlay dots to simulate masking.",
+      "**Don't** add shadows, glows, blurs or deboss edges.",
+      "**Don't** wrap a code line to fit the measure.",
+      "**Don't** set `fontsecret` in the wood type or in capitals.",
+      "**Don't** use the tracked uppercase label as a kicker above a headline; it only names a container of content."
+    ]
+  }
+}
